@@ -3,9 +3,9 @@ import os
 import sys
 from importlib import import_module
 
-from werkzeug import Request
-from werkzeug import Response
-from werkzeug import run_simple
+from werkzeug.serving import run_simple
+from werkzeug.wrappers import Request
+from werkzeug.wrappers import Response
 
 name = sys.argv[1]
 mod = import_module(name)
