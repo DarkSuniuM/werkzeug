@@ -3,12 +3,21 @@ import socket
 
 import pytest
 
+try:
+    import cryptography
+except ImportError:
+    cryptography = None
+
+requires_cryptography = pytest.mark.skipif(
+    cryptography is None, reason="'cryptography' is not installed"
+)
+
 
 @pytest.mark.parametrize(
     "kwargs",
     [
         pytest.param({}, id="http"),
-        pytest.param({"ssl_context": "adhoc"}, id="https"),
+        pytest.param({"ssl_context": "adhoc"}, id="https", marks=requires_cryptography),
         pytest.param({"use_reloader": True}, id="reloader"),
         pytest.param(
             {"hostname": "unix"},
