@@ -78,6 +78,9 @@ class DevServerClient:
 
         self.log_path = None
 
+    def open_log(self):
+        return open(self.log_path)
+
     def connect(self):
         protocol = self.url.partition(":")[0]
 

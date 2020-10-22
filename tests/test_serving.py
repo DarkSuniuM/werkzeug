@@ -1,5 +1,7 @@
+import http.client
 import json
 import socket
+import ssl
 
 import pytest
 
@@ -82,3 +84,18 @@ def test_ssl_object(dev_server):
     client = dev_server(ssl_context="custom")
     r = client.get()
     assert r.json["wsgi.url_scheme"] == "https"
+
+
+def test_wrong_protocol(standard_app):
+    """An HTTPS request to an HTTP server doesn't show a traceback.
+    https://github.com/pallets/werkzeug/pull/838
+    """
+    conn = http.client.HTTPSConnection(standard_app.addr)
+
+    with pytest.raises(ssl.SSLError):
+        conn.request("GET", f"https://{standard_app.addr}")
+
+    with standard_app.open_log() as f:
+        log = f.read()
+
+    assert "Traceback" not in log
