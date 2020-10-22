@@ -4,7 +4,7 @@ from werkzeug.urls import url_parse
 from werkzeug.wrappers import BaseResponse
 
 
-def test_http_proxy(dev_server):
+def x_test_http_proxy(dev_server):
     server = dev_server("proxy_app")
 
     app = ProxyMiddleware(

@@ -303,7 +303,7 @@ def test_get_machine_id():
 
 
 @pytest.mark.parametrize("crash", (True, False))
-def test_basic(dev_server, crash):
+def x_test_basic(dev_server, crash):
     server = dev_server("debug_app")
 
     r = server.get(f"{server.url}/crash={crash}")
