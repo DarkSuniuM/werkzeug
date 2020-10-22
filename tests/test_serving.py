@@ -33,9 +33,29 @@ def test_server(tmp_path, dev_server, kwargs: dict):
         kwargs["hostname"] = f"unix://{tmp_path / 'test.sock'}"
 
     client = dev_server(**kwargs)
+    r = client.get()
+    assert r.status == 200
+    assert r.json["PATH_INFO"] == "/"
 
-    with client.get() as response:
-        data = json.load(response)
 
-    assert response.status == 200
-    assert data["PATH_INFO"] == "/"
+def test_full_url(standard_app):
+    conn = standard_app.connect()
+    conn.request(
+        "GET",
+        "http://missing.test:1337/index.html#ignore",
+        headers={"x-base-url": standard_app.url},
+    )
+    response = conn.getresponse()
+    environ = json.load(response)
+    response.close()
+    conn.close()
+    assert environ["HTTP_HOST"] == "missing.test:1337"
+    assert environ["PATH_INFO"] == "/index.html"
+    port = environ["HTTP_X_BASE_URL"].rpartition(":")[2]
+    assert environ["SERVER_PORT"] == port
+
+
+def test_double_slash_path(standard_app):
+    r = standard_app.get("//double-slash")
+    assert "double-slash" not in r.json["HTTP_HOST"]
+    assert r.json["PATH_INFO"] == "/double-slash"
