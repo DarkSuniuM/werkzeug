@@ -38,7 +38,7 @@ def test_server(tmp_path, dev_server, kwargs: dict):
     assert r.json["PATH_INFO"] == "/"
 
 
-def test_full_url(standard_app):
+def test_untrusted_host(standard_app):
     conn = standard_app.connect()
     conn.request(
         "GET",
@@ -51,7 +51,8 @@ def test_full_url(standard_app):
     conn.close()
     assert environ["HTTP_HOST"] == "missing.test:1337"
     assert environ["PATH_INFO"] == "/index.html"
-    port = environ["HTTP_X_BASE_URL"].rpartition(":")[2]
+    host, _, port = environ["HTTP_X_BASE_URL"].rpartition(":")
+    assert environ["SERVER_NAME"] == host.partition("http://")[2]
     assert environ["SERVER_PORT"] == port
 
 
@@ -59,3 +60,9 @@ def test_double_slash_path(standard_app):
     r = standard_app.get("//double-slash")
     assert "double-slash" not in r.json["HTTP_HOST"]
     assert r.json["PATH_INFO"] == "/double-slash"
+
+
+def test_500_error(standard_app):
+    r = standard_app.get("/crash")
+    assert r.status == 500
+    assert b"Internal Server Error" in r.data

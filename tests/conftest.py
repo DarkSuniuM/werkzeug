@@ -3,6 +3,7 @@ import json
 import socket
 import ssl
 import sys
+import urllib.error
 import urllib.request
 from itertools import count
 from pathlib import Path
@@ -89,8 +90,14 @@ class DevServerClient:
         return http.client.HTTPConnection(self.addr)
 
     def get(self, path="", **kwargs):
-        with self.opener.open(f"{self.url}{path}", **kwargs) as response:
-            response.data = response.read()
+        try:
+            with self.opener.open(f"{self.url}{path}", **kwargs) as response:
+                response.data = response.read()
+        except urllib.error.HTTPError as e:
+            response = e
+
+            with response:
+                response.data = response.read()
 
         if response.headers["Content-Type"].startswith("application/json"):
             response.json = json.loads(response.data)
