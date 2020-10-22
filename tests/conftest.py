@@ -111,7 +111,7 @@ class DevServerClient:
 def dev_server(xprocess, request):
     xp_name = f"dev_server-{request.node.name}"
 
-    def start_dev_server(name="echo_environ", **kwargs):
+    def start_dev_server(name="standard", **kwargs):
         client = DevServerClient(kwargs)
 
         class Starter(ProcessStarter):

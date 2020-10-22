@@ -3,12 +3,14 @@ import socket
 
 import pytest
 
+from werkzeug.serving import make_ssl_devcert
+
 try:
     import cryptography
 except ImportError:
     cryptography = None
 
-requires_cryptography = pytest.mark.skipif(
+require_cryptography = pytest.mark.skipif(
     cryptography is None, reason="'cryptography' is not installed"
 )
 
@@ -17,7 +19,7 @@ requires_cryptography = pytest.mark.skipif(
     "kwargs",
     [
         pytest.param({}, id="http"),
-        pytest.param({"ssl_context": "adhoc"}, id="https", marks=requires_cryptography),
+        pytest.param({"ssl_context": "adhoc"}, id="https", marks=require_cryptography),
         pytest.param({"use_reloader": True}, id="reloader"),
         pytest.param(
             {"hostname": "unix"},
@@ -66,3 +68,17 @@ def test_500_error(standard_app):
     r = standard_app.get("/crash")
     assert r.status == 500
     assert b"Internal Server Error" in r.data
+
+
+@require_cryptography
+def test_ssl_dev_cert(tmp_path, dev_server):
+    client = dev_server(ssl_context=make_ssl_devcert(tmp_path))
+    r = client.get()
+    assert r.json["wsgi.url_scheme"] == "https"
+
+
+@require_cryptography
+def test_ssl_object(dev_server):
+    client = dev_server(ssl_context="custom")
+    r = client.get()
+    assert r.json["wsgi.url_scheme"] == "https"
