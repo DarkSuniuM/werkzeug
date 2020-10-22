@@ -79,6 +79,8 @@ class DevServerClient:
 
 @pytest.fixture(name="dev_server")
 def dev_server_factory(xprocess, request):
+    xp_name = f"dev_server-{request.node.name}"
+
     def dev_server(name="echo_environ", **kwargs):
         hostname = kwargs.get("hostname", "127.0.0.1")
 
@@ -103,12 +105,8 @@ def dev_server_factory(xprocess, request):
                 client.get("/get-pid").close()
                 return "GET /get-pid"
 
-        _, client.log_path = xprocess.ensure("dev_server", Starter, restart=True)
-
-        @request.addfinalizer
-        def terminate():
-            xprocess.getinfo("dev_server").terminate()
-
+        _, client.log_path = xprocess.ensure(xp_name, Starter, restart=True)
         return client
 
-    return dev_server
+    yield dev_server
+    xprocess.getinfo(xp_name).terminate()
