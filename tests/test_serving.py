@@ -7,6 +7,7 @@ from io import BytesIO
 
 import pytest
 
+from werkzeug import run_simple
 from werkzeug.datastructures import FileStorage
 from werkzeug.serving import make_ssl_devcert
 from werkzeug.test import stream_encode_multipart
@@ -115,6 +116,11 @@ def test_content_type_and_length(standard_app):
     assert r.json["CONTENT_LENGTH"] == "2"
 
 
+def test_port_is_int():
+    with pytest.raises(TypeError, match="port must be an integer"):
+        run_simple("127.0.0.1", "5000", None)
+
+
 @pytest.mark.parametrize("send_length", [False, True])
 @pytest.mark.skipif(sys.version_info < (3, 7), reason="requires Python >= 3.7")
 def test_chunked_encoding(monkeypatch, dev_server, send_length):
@@ -158,3 +164,43 @@ def test_chunked_encoding(monkeypatch, dev_server, send_length):
     assert environ["HTTP_TRANSFER_ENCODING"] == "chunked"
     assert "HTTP_CONTENT_LENGTH" not in environ
     assert environ["wsgi.input_terminated"]
+
+
+def test_multiple_headers_concatenated(standard_app):
+    """A header key can be sent multiple times. The server will join all
+    the values with commas.
+
+    https://tools.ietf.org/html/rfc3875#section-4.1.18
+    """
+    # Can't use open or conn.request, don't support multiple values.
+    conn = standard_app.connect()
+    conn.putrequest("GET", "/")
+    conn.putheader("XYZ", "a ")  # trailing space is preserved
+    conn.putheader("X-Ignore-1", "ignore value")
+    conn.putheader("XYZ", " b")  # leading space is collapsed
+    conn.putheader("X-Ignore-2", "ignore value")
+    conn.putheader("XYZ", "c ")
+    conn.putheader("X-Ignore-3", "ignore value")
+    conn.putheader("XYZ", "d")
+    conn.endheaders()
+    r = conn.getresponse()
+    data = json.load(r)
+    r.close()
+    assert data["HTTP_XYZ"] == "a ,b,c ,d"
+
+
+def test_multiline_header_folding(standard_app):
+    """A header value can be split over multiple lines with a leading
+    tab. The server will remove the newlines and preserve the tabs.
+
+    https://tools.ietf.org/html/rfc2616#section-2.2
+    """
+    # Can't use open or conn.request, don't support multiline values.
+    conn = standard_app.connect()
+    conn.putrequest("GET", "/")
+    conn.putheader("XYZ", "first", "second", "third")
+    conn.endheaders()
+    r = conn.getresponse()
+    data = json.load(r)
+    r.close()
+    assert data["HTTP_XYZ"] == "first\tsecond\tthird"
