@@ -81,20 +81,25 @@ class DevServerClient:
     def open_log(self):
         return open(self.log_path)
 
-    def connect(self):
+    def connect(self, **kwargs):
         protocol = self.url.partition(":")[0]
 
         if protocol == "https":
-            return http.client.HTTPSConnection(self.addr, context=ssl.SSLContext())
+            if "context" not in kwargs:
+                kwargs["context"] = ssl.SSLContext()
+
+            return http.client.HTTPSConnection(self.addr, **kwargs)
 
         if protocol == "unix":
-            return UnixSocketHTTPConnection(self.addr)
+            return UnixSocketHTTPConnection(self.addr, **kwargs)
 
-        return http.client.HTTPConnection(self.addr)
+        return http.client.HTTPConnection(self.addr, **kwargs)
 
-    def get(self, path="", **kwargs):
+    def open(self, path="", **kwargs):
+        request = urllib.request.Request(f"{self.url}{path}", **kwargs)
+
         try:
-            with self.opener.open(f"{self.url}{path}", **kwargs) as response:
+            with self.opener.open(request) as response:
                 response.data = response.read()
         except urllib.error.HTTPError as e:
             response = e
@@ -122,7 +127,7 @@ def dev_server(xprocess, request):
 
             @cached_property
             def pattern(self):
-                client.get("/get-pid").close()
+                client.open("/get-pid").close()
                 return "GET /get-pid"
 
         _, client.log_path = xprocess.ensure(xp_name, Starter, restart=True)

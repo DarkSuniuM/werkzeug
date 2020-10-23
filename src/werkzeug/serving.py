@@ -92,6 +92,7 @@ class DechunkedInput(io.RawIOBase):
     def read_chunk_len(self) -> int:
         try:
             line = self._rfile.readline().decode("latin1")
+            print(line)
             _len = int(line.strip(), 16)
         except ValueError:
             raise OSError("Invalid chunk header")
